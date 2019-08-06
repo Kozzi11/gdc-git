@@ -9,10 +9,9 @@
 
 pkgbase=gdc-git
 pkgname=(gdc-git libgphobos-git)
-pkgver=8.2.1+2.081.2
-_branch=gdc-8 # Change here! pkgver/_gccver/_d_ver will be automatically updated.
-_islver=0.20 # Change here!
-_gccver=8.2.1-20181127 # Change here! Should match Arch's GCC version
+pkgver=10.0.0+2.086.0
+_branch=ibuclaw/gdc # Change here! pkgver/_gccver/_d_ver will be automatically updated.
+_islver=0.21 # Change here!
 _d_ver=''
 pkgrel=3
 arch=('x86_64' 'i686')
@@ -22,46 +21,44 @@ pkgdesc="GCC based D compiler"
 groups=('dlang')
 makedepends=('git' 'gdc')
 source=(
-	"https://sources.archlinux.org/other/gcc/gcc-$_gccver.tar.xz"
         "http://isl.gforge.inria.fr/isl-$_islver.tar.bz2"
-        "gdc::git+https://github.com/D-Programming-GDC/GDC.git#branch=$_branch"
+        "gdc::git+https://github.com/gcc-mirror/gcc.git#branch=$_branch"
         'git+https://github.com/D-Programming-GDC/GDMD.git'
         'paths.diff')
-sha512sums=('8988e9425a1fb5c2bc7655a8054438060e145d568fa60d19ec2ab4005a8becc06f906cffbfb674ff6c6995a3751af0590d2e6d5694cbb88951633aa8c2667e18'
-            'afe2e159b74646a26449268637403d271f9e3f6410d8cc1c9cffca41370c4357b165dea844db0c2a654591f954e54710dda650c8088abd4711406aa6302da950'
+sha256sums=('777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
             'SKIP'
             'SKIP'
-            '841504e9dffe718f7e5a5fbbf03299f2b51acd783d47f99894aa5d411abcc56aedfffd4b16595e3a9446f2206f9eb29cb01e235e82c211796cd24dc23c02b578')
+            '841504e9dffe718f7e5a5fbbf03299f2b51acd783d47f99894aa5d411abcc56a')
 
 pkgver() {
-  if [ -f gdc/gcc/d/verstr.h ]; then
-    _d_ver="+$(cat gdc/gcc/d/verstr.h | sed 's|\"||g')"
-  elif [ -f gdc/gcc/d/VERSION ]; then
-    _d_ver="+$(cat gdc/gcc/d/VERSION | sed 's|\"||g')"
+  if [ -f gdc/gcc/d/dmd/VERSION ]; then
+    _d_ver="+$(cat gdc/gcc/d/dmd/VERSION | sed 's|\"||g')"
   fi
-
-  echo "$(cat gcc/gcc/BASE-VER)$_d_ver"
+  echo "$(cat gdc/gcc/BASE-VER)$_d_ver"
 }
 
 prepare() {
   # Setup paths
-  ln -sf "$srcdir"/gcc-$_gccver "$srcdir"/gcc
   ln -sf "$srcdir"/isl-$_islver "$srcdir"/gcc/isl
 
   # Setup gcc
-  cd "$srcdir"/gcc
-
-  sed -i 's|\./fixinc\.sh|-c true|' gcc/Makefile.in # Do not run fixincludes
-  sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64 # Fix lib64 path
-  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
-
-  # Seup gdc
   cd "$srcdir"/gdc
 
-  git apply "$srcdir"/paths.diff
-  ./setup-gcc.sh ../gcc
+  ln -s ../isl-${_islver} isl
 
-  mkdir "$srcdir"/gcc-build
+  # Do not run fixincludes
+  sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
+
+  # Arch Linux installs x86_64 libraries /lib
+  sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64
+
+  # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
+
+  git apply "$srcdir"/paths.diff
+
+  mkdir -p "$srcdir/gcc-build"
+
 }
 
 build() {
