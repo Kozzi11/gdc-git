@@ -1,0 +1,26 @@
+diff --git a/libphobos/configure b/libphobos/configure
+index 95a2b423218..82635e7c149 100755
+--- a/libphobos/configure
++++ b/libphobos/configure
+@@ -15256,7 +15256,7 @@ $as_echo "$version_specific_libs" >&6; }
+ 
+ 
+   # Default case for install directory for D sources files.
+-  gdc_include_dir='$(libdir)/gcc/${target_alias}/${gcc_version}/include/d'
++  gdc_include_dir='$(includedir)/dlang/gdc/'
+ 
+ 
+ 
+diff --git a/libphobos/m4/druntime.m4 b/libphobos/m4/druntime.m4
+index 978c5fe92d2..dc898499cb6 100644
+--- a/libphobos/m4/druntime.m4
++++ b/libphobos/m4/druntime.m4
+@@ -104,7 +104,7 @@ AC_DEFUN([DRUNTIME_INSTALL_DIRECTORIES],
+   AC_SUBST(libphobos_toolexeclibdir)
+ 
+   # Default case for install directory for D sources files.
+-  gdc_include_dir='$(libdir)/gcc/${target_alias}/${gcc_version}/include/d'
++  gdc_include_dir='$(includedir)/dlang/gdc/'
+   AC_SUBST(gdc_include_dir)
+ ])
+ 
