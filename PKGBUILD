@@ -9,42 +9,43 @@
 
 pkgbase=gdc-git
 pkgname=(gdc-git libgphobos-git)
-pkgver=10.0.0+2.086.0
+_gccver=10.0.0
+pkgver=10.0.0+v2.086.0
+
 _branch=ibuclaw/gdc # Change here! pkgver/_gccver/_d_ver will be automatically updated.
 _islver=0.21 # Change here!
 _d_ver=''
-pkgrel=3
+pkgrel=1
 arch=('x86_64' 'i686')
 license=('GPL3')
-url="https://github.com/D-Programming-GDC/GDC"
+url="https://gdcproject.org/"
 pkgdesc="GCC based D compiler"
 groups=('dlang')
 makedepends=('git' 'gdc')
 source=(
         "http://isl.gforge.inria.fr/isl-$_islver.tar.bz2"
-        "gdc::git+https://github.com/gcc-mirror/gcc.git#branch=$_branch"
+        "gcc::git+https://github.com/gcc-mirror/gcc.git#branch=$_branch"
         'git+https://github.com/D-Programming-GDC/GDMD.git'
-        'paths.diff')
-sha256sums=('777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
+        'phobos_paths.patch')
+sha256sums=('d18ca11f8ad1a39ab6d03d3dcb3365ab416720fcb65b42d69f34f51bf0a0e859'
             'SKIP'
             'SKIP'
-            '841504e9dffe718f7e5a5fbbf03299f2b51acd783d47f99894aa5d411abcc56a')
+            '5bf13a64bc49392a5ef8a260420449055ebdd355ff336488906e524f13203dec')
 
 pkgver() {
-  if [ -f gdc/gcc/d/dmd/VERSION ]; then
-    _d_ver="+$(cat gdc/gcc/d/dmd/VERSION | sed 's|\"||g')"
+  if [ -f gcc/gcc/d/dmd/VERSION ]; then
+    _d_ver="+$(cat gcc/gcc/d/dmd/VERSION | sed 's|\"||g')"
   fi
-  echo "$(cat gdc/gcc/BASE-VER)$_d_ver"
+  echo "$(cat gcc/gcc/BASE-VER)$_d_ver"
 }
 
 prepare() {
-  # Setup paths
-  ln -sf "$srcdir"/isl-$_islver "$srcdir"/gcc/isl
+  [[ ! -d gcc ]] && ln -s gcc-$_gccver/+/-} gcc
+  cd gcc
 
-  # Setup gcc
-  cd "$srcdir"/gdc
+  git apply "$srcdir"/phobos_paths.patch
 
-  ln -s ../isl-${_islver} isl
+  [[ ! -d isl ]] && ln -s ../isl-${_islver} isl
 
   # Do not run fixincludes
   sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
@@ -55,66 +56,69 @@ prepare() {
   # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
   sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
 
-  git apply "$srcdir"/paths.diff
-
   mkdir -p "$srcdir/gcc-build"
 
 }
 
 build() {
-  cd "$srcdir"/gcc-build
+  cd gcc-build
 
   # using -pipe causes spurious test-suite failures
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48565
-  export CFLAGS="${CFLAGS/-pipe/} -O2"
-  export CXXFLAGS="${CXXFLAGS/-pipe/} -O2"
+  CFLAGS=${CFLAGS/-pipe/}
+  CXXFLAGS=${CXXFLAGS/-pipe/}
 
-  "$srcdir"/gcc/configure --prefix=/usr \
-                          --libdir=/usr/lib \
-                          --libexecdir=/usr/lib \
-                          --mandir=/usr/share/man \
-                          --infodir=/usr/share/info \
-                          --enable-languages=d \
-                          --enable-shared \
-                          --enable-static \
-                          --enable-threads=posix \
-                          --enable-libmpx \
-                          --with-system-zlib \
-                          --with-isl \
-                          --enable-__cxa_atexit \
-                          --disable-libunwind-exceptions \
-                          --enable-clocale=gnu \
-                          --disable-libstdcxx-pch \
-                          --disable-libssp \
-                          --enable-gnu-unique-object \
-                          --enable-linker-build-id \
-                          --enable-lto \
-                          --enable-plugin \
-                          --enable-install-libiberty \
-                          --with-linker-hash-style=gnu \
-                          --enable-gnu-indirect-function \
-                          --disable-multilib \
-                          --disable-werror \
-                          --disable-bootstrap \
-                          --enable-default-pie \
-                          --enable-default-ssp \
-                          --with-bugurl=https://bugzilla.gdcproject.org/ \
-                          --with-pkgversion="GDC ${pkgver%+*} based on D v${pkgver#*+} built with ISL $_islver for Arch Linux" \
-                          gdc_include_dir=/usr/include/dlang/gdc
+    "$srcdir/gcc/configure" --prefix=/usr \
+      --libdir=/usr/lib \
+      --libexecdir=/usr/lib \
+      --mandir=/usr/share/man \
+      --infodir=/usr/share/info \
+      --with-bugurl=https://bugzilla.gdcproject.org/ \
+      --with-pkgversion="GDC ${pkgver%+*} based on D v${pkgver#*+} built with ISL $_islver for Arch Linux" \
+      --enable-languages=d \
+      --enable-shared \
+      --enable-static \
+      --enable-threads=posix \
+      --with-isl \
+      --enable-__cxa_atexit \
+      --disable-libunwind-exceptions \
+      --enable-clocale=gnu \
+      --disable-libstdcxx-pch \
+      --disable-libssp \
+      --enable-gnu-unique-object \
+      --enable-linker-build-id \
+      --enable-lto \
+      --enable-plugin \
+      --enable-install-libiberty \
+      --with-linker-hash-style=gnu \
+      --enable-gnu-indirect-function \
+      --disable-multilib \
+      --disable-werror \
+      --enable-bootstrap \
+      --enable-checking=release \
+      --enable-default-pie \
+      --enable-default-ssp \
+      --enable-cet=auto \
+      gdc_include_dir=/usr/include/dlang/gdc
 
-  make $MAKEFLAGS
+  make
 }
 
 package_gdc-git() {
   pkgdesc="Compiler for D programming language which uses gcc backend"
   depends=('gcc' 'perl' 'binutils' 'libgphobos')
   provides=("d-compiler=${pkgver#*+}" 'gdc')
-  conflicts=('gdc')
+  conflicts=('gdc' 'gcc-gdc')
 
   # Binaries
   install -Dm 755 gcc-build/gcc/gdc "$pkgdir"/usr/bin/gdc
-  install -Dm 755 gcc-build/gcc/cc1d "$pkgdir"/usr/lib/gcc/$CHOST/${pkgver%+*}/cc1d
+  install -Dm 755 gcc-build/gcc/d21 "$pkgdir"/usr/lib/gcc/$CHOST/${pkgver%+*}/d21
   install -Dm 755 GDMD/dmd-script "$pkgdir"/usr/bin/gdmd
+
+  cd gcc-build
+  make -C lto-plugin DESTDIR="$pkgdir" install
+  make -C $CHOST/libgcc DESTDIR="$pkgdir" install
+  rm -f "$pkgdir"/usr/lib{,32}/libgcc_s.so*
 
   # Doc
   install -Dm 644 "$srcdir"/GDMD/dmd-script.1 "$pkgdir"/usr/share/man/man1/gdmd.1
@@ -124,7 +128,7 @@ package_gdc-git() {
 package_libgphobos-git() {
   pkgdesc="Standard library for D programming language, GDC port"
   provides=('d-runtime' 'd-stdlib' 'libgphobos')
-  conflicts=('libgphobos')
+  conflicts=('libgphobos' 'gcc-gdc')
   options=('staticlibs')
 
   cd "$srcdir"/gcc-build
