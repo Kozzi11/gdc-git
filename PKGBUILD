@@ -43,7 +43,7 @@ prepare() {
   [[ ! -d gcc ]] && ln -s gcc-$_gccver/+/-} gcc
   cd gcc
 
-  git apply "$srcdir"/phobos_paths.patch
+  # git apply "$srcdir"/phobos_paths.patch
 
   [[ ! -d isl ]] && ln -s ../isl-${_islver} isl
 
@@ -74,9 +74,9 @@ build() {
       --mandir=/usr/share/man \
       --infodir=/usr/share/info \
       --with-bugurl=https://bugzilla.gdcproject.org/ \
-      --with-pkgversion="GDC ${pkgver%+*} based on D v${pkgver#*+} built with ISL $_islver for Arch Linux" \
+      --with-pkgversion="GDC ${pkgver%+*} based on D ${pkgver#*+} built with ISL $_islver for Arch Linux" \
+      --with-system-zlib \
       --enable-languages=d \
-      --enable-shared \
       --enable-static \
       --enable-threads=posix \
       --with-isl \
@@ -99,7 +99,7 @@ build() {
       --enable-default-pie \
       --enable-default-ssp \
       --enable-cet=auto \
-      gdc_include_dir=/usr/include/dlang/gdc
+      --with-target-system-zlib=yes
 
   make
 }
@@ -133,6 +133,10 @@ package_libgphobos-git() {
 
   cd "$srcdir"/gcc-build
   make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+
+  mkdir -p -m 755 "$pkgdir"/usr/include/dlang
+
+  ln -s /usr/lib/gcc/$CHOST/${pkgver%+*}/include/d "$pkgdir"/usr/include/dlang/gdc
 
   if [ -d "$pkgdir"/usr/lib64 ]; then
     mv "$pkgdir"/usr/lib64/* "$pkgdir"/usr/lib
